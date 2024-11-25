@@ -37,27 +37,86 @@
         7.3) Now compress the breast by reducing the width of your phantom.
         What is the effect of this? Quantify the effect you may have    
 %}
-%% 2D Phantom Generation
-function phantom = generate_2d_phantom(size)
-    phantom = zeros(size);
-    phantom(size/4:3*size/4, size/3:2*size/3) = 1; % Rectangle
-    figure;
-    imshow(phantom, []);
-    title('2D Phantom');
+%% GUI for X-Ray Simulator with Dynamic Projection Scaling
+function xray_simulator_gui()
+    % Create the figure
+    f = figure('Name', 'X-Ray Simulator', 'NumberTitle', 'off', 'Position', [100, 100, 800, 600]);
+    
+    % Add sliders for parameters
+    uicontrol(f, 'Style', 'text', 'Position', [50, 500, 100, 20], 'String', 'X-Ray Angle');
+    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [50, 470, 100, 20], ...
+                             'Min', 0, 'Max', 180, 'Value', 0, ...
+                             'Callback', @(~, ~) update_visualization());
+                         
+    uicontrol(f, 'Style', 'text', 'Position', [200, 500, 100, 20], 'String', 'Distance');
+    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [200, 470, 100, 20], ...
+                                'Min', 0.5, 'Max', 2, 'Value', 1, ...
+                                'Callback', @(~, ~) update_visualization());
+    
+    % Axes to display 3D Phantom and 2D Projection
+    ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
+    ax2d = axes(f, 'Position', [0.55, 0.1, 0.4, 0.6]); % For 2D projection
+    
+    % Base phantom size
+    base_size = 100;
+    mu_values = [0, 0.5, 1.0];
+    
+    function update_visualization()
+        % Get the slider values
+        angle = angle_slider.Value;
+        scale_factor = distance_slider.Value; % Scale factor for perceived distance
+        
+        % Generate the phantom
+        phantom = generate_3d_phantom(base_size, false);
+        
+        % Simulate the X-ray projection
+        projection = simulate_xray(phantom, mu_values, angle);
+        
+        % Scale the projection size
+        scaled_projection = imresize(projection, 1 / scale_factor, 'nearest');
+        
+        % Add padding to create the black space
+        padding_size = round((size(projection, 1) - size(scaled_projection, 1)) / 2);
+        padded_projection = padarray(scaled_projection, [padding_size, padding_size], 0, 'both');
+        
+        % Ensure the padded projection matches the original display size
+        padded_projection = imresize(padded_projection, [size(projection, 1), size(projection, 2)], 'nearest');
+        
+        % Update 3D visualization
+        axes(ax3d);
+        cla(ax3d);
+        slice(ax3d, phantom, size(phantom, 2) / 2, size(phantom, 1) / 2, size(phantom, 3) / 2);
+        colormap(ax3d, 'gray');
+        title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
+        axis(ax3d, 'equal');
+        
+        % Update 2D projection visualization
+        axes(ax2d);
+        cla(ax2d);
+        imshow(padded_projection, [], 'Parent', ax2d);
+        colormap(ax2d, 'gray');
+        title(ax2d, sprintf('Projection (Angle: %.0f, Distance Factor: %.2fx)', angle, scale_factor));
+    end
+    
+    % Display the initial projection
+    update_visualization();
 end
-%%
+
+%% Helper Functions
+
+% Generate 3D Phantom
 function phantom = generate_3d_phantom(size, is_leg)
     [x, y, z] = meshgrid(1:size, 1:size, 1:size);
     phantom = zeros(size, size, size);
     
     center = size / 2;
     if is_leg
-        % Leg: Tissue and Bone Cylinders
+        % Leg: Tissue and Tumor Cylinders
         tissue_radius = size / 3;
         bone_radius = size / 6;
         distance = sqrt((x - center).^2 + (y - center).^2);
         phantom(distance <= tissue_radius) = 1; % Tissue
-        phantom(distance <= bone_radius) = 2;  % Bone
+        phantom(distance <= bone_radius) = 2;  % Tumor/Bone
     else
         % Breast: Spherical Tumor
         breast_radius = size / 3;
@@ -66,60 +125,23 @@ function phantom = generate_3d_phantom(size, is_leg)
         phantom(distance <= breast_radius) = 1; % Breast
         phantom(distance <= tumor_radius) = 2;  % Tumor
     end
-    
-    figure;
-    slice(phantom, size/2, size/2, size/2);
-    title('3D Phantom');
-    colormap('gray');
 end
-%% Simulate x-ray
-function projection = simulate_xray(phantom, mu_values)
-    % phantom: 3D array
-    % mu_values: [mu_air, mu_tissue, mu_bone]
-    attenuation = zeros(size(phantom));
+
+% Simulate X-Ray Projection
+function projection = simulate_xray(phantom, mu_values, angle)
+    % Rotate the phantom based on the specified angle
+    rotated_phantom = imrotate3(phantom, angle, [0 1 0], 'crop');
     
+    % Assign attenuation values based on material type
+    attenuation = zeros(size(rotated_phantom));
     for material = 0:2
-        attenuation(phantom == material) = mu_values(material + 1);
+        attenuation(rotated_phantom == material) = mu_values(material + 1);
     end
     
-    % Summing along the Z-axis for the projection
+    % Sum along the Z-axis to simulate the X-ray projection
     projection = sum(attenuation, 3);
-    
-    figure;
-    imshow(projection, []);
-    title('X-Ray Projection');
-    colormap('gray');
 end
 
-%% GUI 
-function xray_simulator_gui()
-    % Create the figure
-    f = figure('Name', 'X-Ray Simulator', 'NumberTitle', 'off', 'Position', [100, 100, 500, 400]);
-    
-    % Add sliders for parameters
-    uicontrol(f, 'Style', 'text', 'Position', [50, 330, 100, 20], 'String', 'X-Ray Angle');
-    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [50, 300, 100, 20], 'Min', 0, 'Max', 180, 'Value', 0);
 
-    uicontrol(f, 'Style', 'text', 'Position', [200, 330, 100, 20], 'String', 'Distance');
-    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [200, 300, 100, 20], 'Min', 10, 'Max', 200, 'Value', 50);
+xray_simulator_gui();
 
-    % Button to update projection
-    uicontrol(f, 'Style', 'pushbutton', 'Position', [350, 300, 100, 30], 'String', 'Update Projection', ...
-              'Callback', @(~, ~) update_projection(angle_slider.Value, distance_slider.Value));
-          
-    % Axes to display projection
-    ax = axes(f, 'Position', [0.1, 0.1, 0.8, 0.5]);
-    
-    function update_projection(angle, distance)
-        % Update projection based on slider values
-        % Example: Regenerate phantom and simulate x-ray
-        phantom = generate_3d_phantom(100, false);
-        mu_values = [0, 0.5, 1.0];
-        projection = simulate_xray(phantom, mu_values); % Call simulation code here
-        
-        % Display projection
-        imshow(projection, 'Parent', ax);
-        title(ax, sprintf('Projection (Angle: %.0f, Distance: %.0f)', angle, distance));
-    end
-end
-xray_simulator_gui()
