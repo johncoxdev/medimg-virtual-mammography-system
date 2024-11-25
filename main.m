@@ -50,8 +50,13 @@ function xray_simulator_gui()
                          
     uicontrol(f, 'Style', 'text', 'Position', [200, 500, 100, 20], 'String', 'Distance');
     distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [200, 470, 100, 20], ...
-                                'Min', 0.5, 'Max', 2, 'Value', 1, ...
+                                'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
                                 'Callback', @(~, ~) update_visualization());
+                            
+    uicontrol(f, 'Style', 'text', 'Position', [350, 500, 100, 20], 'String', 'Beam Energy (keV)');
+    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [350, 470, 100, 20], ...
+                              'Min', 20, 'Max', 50, 'Value', 30, ...
+                              'Callback', @(~, ~) update_visualization());
     
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
@@ -59,12 +64,15 @@ function xray_simulator_gui()
     
     % Base phantom size
     base_size = 100;
-    mu_values = [0, 0.5, 1.0];
     
     function update_visualization()
         % Get the slider values
         angle = angle_slider.Value;
         scale_factor = distance_slider.Value; % Scale factor for perceived distance
+        energy = energy_slider.Value; % X-ray beam energy in keV
+        
+        % Calculate attenuation coefficients based on energy
+        mu_values = calculate_attenuation(energy); 
         
         % Generate the phantom
         phantom = generate_3d_phantom(base_size, false);
@@ -76,26 +84,32 @@ function xray_simulator_gui()
         scaled_projection = imresize(projection, 1 / scale_factor, 'nearest');
         
         % Add padding to create the black space
-        padding_size = round((size(projection, 1) - size(scaled_projection, 1)) / 2);
+        original_size = size(projection, 1);
+        scaled_size = size(scaled_projection, 1);
+        padding_size = max(0, round((original_size - scaled_size) / 2));
         padded_projection = padarray(scaled_projection, [padding_size, padding_size], 0, 'both');
         
         % Ensure the padded projection matches the original display size
-        padded_projection = imresize(padded_projection, [size(projection, 1), size(projection, 2)], 'nearest');
+        padded_projection = imresize(padded_projection, [original_size, original_size], 'nearest');
         
         % Update 3D visualization
         axes(ax3d);
         cla(ax3d);
         slice(ax3d, phantom, size(phantom, 2) / 2, size(phantom, 1) / 2, size(phantom, 3) / 2);
         colormap(ax3d, 'gray');
+        caxis(ax3d, [0 max(phantom(:))]); % Adjust color intensity
         title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
         axis(ax3d, 'equal');
         
         % Update 2D projection visualization
         axes(ax2d);
         cla(ax2d);
-        imshow(padded_projection, [], 'Parent', ax2d);
+        % Normalize projection for better visualization
+        normalized_projection = padded_projection / max(padded_projection(:));
+        imshow(normalized_projection, [], 'Parent', ax2d);
         colormap(ax2d, 'gray');
-        title(ax2d, sprintf('Projection (Angle: %.0f, Distance Factor: %.2fx)', angle, scale_factor));
+        caxis(ax2d, [0 1]); % Adjust color intensity dynamically
+        title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV)', angle, energy));
     end
     
     % Display the initial projection
@@ -103,6 +117,20 @@ function xray_simulator_gui()
 end
 
 %% Helper Functions
+
+% Calculate Attenuation Coefficients Based on Energy
+function mu_values = calculate_attenuation(energy)
+    % Define attenuation values for different materials
+    mu_background = 0; % Air or background
+    mu_tissue = 0.3 + 0.01 * (50 - energy); % Tissue
+    mu_tumor = mu_tissue + 0.15 * (energy - 20) / 30; % Tumor diverges more significantly
+    mu_bone = 0.6 + 0.015 * (50 - energy);  % Bone
+    
+    % Ensure coefficients remain non-negative
+    mu_values = max([mu_background, mu_tissue, mu_tumor, mu_bone], 0);
+end
+
+
 
 % Generate 3D Phantom
 function phantom = generate_3d_phantom(size, is_leg)
@@ -120,7 +148,7 @@ function phantom = generate_3d_phantom(size, is_leg)
     else
         % Breast: Spherical Tumor
         breast_radius = size / 3;
-        tumor_radius = size / 10;
+        tumor_radius = size / 20;
         distance = sqrt((x - center).^2 + (y - center).^2 + (z - center).^2);
         phantom(distance <= breast_radius) = 1; % Breast
         phantom(distance <= tumor_radius) = 2;  % Tumor
@@ -140,8 +168,9 @@ function projection = simulate_xray(phantom, mu_values, angle)
     
     % Sum along the Z-axis to simulate the X-ray projection
     projection = sum(attenuation, 3);
+    
+    % DO NOT normalize here to preserve relative contrast between materials
 end
 
-
+% Run the GUI
 xray_simulator_gui();
-
