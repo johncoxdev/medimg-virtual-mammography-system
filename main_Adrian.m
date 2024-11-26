@@ -37,26 +37,39 @@
         7.3) Now compress the breast by reducing the width of your phantom.
         What is the effect of this? Quantify the effect you may have    
 %}
-%% GUI for X-Ray Simulator with Dynamic Projection Scaling
 function xray_simulator_gui()
     % Create the figure
-    f = figure('Name', 'X-Ray Simulator', 'NumberTitle', 'off', 'Position', [100, 100, 800, 600]);
+    f = figure('Name', 'X-Ray Simulator', 'NumberTitle', 'off', 'Position', [100, 100, 1000, 600]);
     
-    % Add sliders for parameters
-    uicontrol(f, 'Style', 'text', 'Position', [50, 500, 100, 20], 'String', 'X-Ray Angle');
-    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [50, 470, 100, 20], ...
+    % Add sliders and text in a vertical column layout
+    
+    % X-Ray Angle
+    uicontrol(f, 'Style', 'text', 'Position', [50, 550, 100, 20], 'String', 'X-Ray Angle');
+    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 550, 100, 20], ...
                              'Min', 0, 'Max', 180, 'Value', 0, ...
                              'Callback', @(~, ~) update_visualization());
-                         
-    uicontrol(f, 'Style', 'text', 'Position', [200, 500, 100, 20], 'String', 'Distance');
-    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [200, 470, 100, 20], ...
+    
+    % Distance
+    uicontrol(f, 'Style', 'text', 'Position', [50, 500, 100, 20], 'String', 'Distance');
+    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 500, 100, 20], ...
                                 'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
                                 'Callback', @(~, ~) update_visualization());
-                            
-    uicontrol(f, 'Style', 'text', 'Position', [350, 500, 100, 20], 'String', 'Beam Energy (keV)');
-    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [350, 470, 100, 20], ...
+    
+    % Beam Energy
+    uicontrol(f, 'Style', 'text', 'Position', [50, 450, 100, 20], 'String', 'Beam Energy (keV)');
+    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 450, 100, 20], ...
                               'Min', 20, 'Max', 50, 'Value', 30, ...
                               'Callback', @(~, ~) update_visualization());
+
+    % Number of Tumors
+    uicontrol(f, 'Style', 'text', 'Position', [50, 400, 100, 20], 'String', 'Num Tumors');
+    num_tumors_input = uicontrol(f, 'Style', 'edit', 'Position', [150, 400, 100, 20], ...
+                                  'String', '1', 'Callback', @(~, ~) update_visualization());
+    
+    % Tumor Size
+    uicontrol(f, 'Style', 'text', 'Position', [50, 350, 100, 20], 'String', 'Tumor Size');
+    tumor_size_input = uicontrol(f, 'Style', 'edit', 'Position', [150, 350, 100, 20], ...
+                                  'String', '5', 'Callback', @(~, ~) update_visualization());
     
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
@@ -65,17 +78,37 @@ function xray_simulator_gui()
     % Base phantom size
     base_size = 100;
     
+    % Predefined tumor locations (up to 5)
+    fixed_tumor_locations = [
+        50, 50, 50;  % Tumor 1
+        30, 30, 30;  % Tumor 2
+        70, 30, 70;  % Tumor 3
+        40, 40, 40;  % Tumor 4
+        30, 50, 30   % Tumor 5
+    ];
+    
     function update_visualization()
         % Get the slider values
         angle = angle_slider.Value;
         scale_factor = distance_slider.Value; % Scale factor for perceived distance
         energy = energy_slider.Value; % X-ray beam energy in keV
         
+        % Get the user input values for number of tumors and tumor size
+        num_tumors = str2double(num_tumors_input.String);  % Convert string to number
+        tumor_size = str2double(tumor_size_input.String);  % Convert string to number
+        
+        % Ensure that the number of tumors is between 1 and 5
+        num_tumors = min(max(num_tumors, 1), 5); % Limit to between 1 and 5
+        
+        % Use the predefined tumor locations, limit to 'num_tumors'
+        tumor_centers = fixed_tumor_locations(1:num_tumors, :);
+        tumor_sizes = repmat(tumor_size, num_tumors, 1);
+        
         % Calculate attenuation coefficients based on energy
         mu_values = calculate_attenuation(energy); 
         
-        % Generate the phantom
-        phantom = generate_3d_phantom(base_size, false);
+        % Generate the phantom with tumors
+        phantom = generate_3d_phantom(base_size, num_tumors, tumor_sizes, tumor_centers);
         
         % Simulate the X-ray projection
         projection = simulate_xray(phantom, mu_values, angle);
@@ -123,35 +156,30 @@ function mu_values = calculate_attenuation(energy)
     % Define attenuation values for different materials
     mu_background = 0; % Air or background
     mu_tissue = 0.3 + 0.01 * (50 - energy); % Tissue
-    mu_tumor = mu_tissue + 0.15 * (energy - 20) / 30; % Tumor diverges more significantly
+    mu_tumor = mu_tissue + 0.15 * (energy - 20) / 10; % Tumor diverges more significantly
     mu_bone = 0.6 + 0.015 * (50 - energy);  % Bone
     
     % Ensure coefficients remain non-negative
     mu_values = max([mu_background, mu_tissue, mu_tumor, mu_bone], 0);
 end
 
-
-
 % Generate 3D Phantom
-function phantom = generate_3d_phantom(size, is_leg)
+function phantom = generate_3d_phantom(size, num_tumors, tumor_sizes, tumor_centers)
     [x, y, z] = meshgrid(1:size, 1:size, 1:size);
     phantom = zeros(size, size, size);
     
     center = size / 2;
-    if is_leg
-        % Leg: Tissue and Tumor Cylinders
-        tissue_radius = size / 3;
-        bone_radius = size / 6;
-        distance = sqrt((x - center).^2 + (y - center).^2);
-        phantom(distance <= tissue_radius) = 1; % Tissue
-        phantom(distance <= bone_radius) = 2;  % Tumor/Bone
-    else
-        % Breast: Spherical Tumor
-        breast_radius = size / 3;
-        tumor_radius = size / 20;
-        distance = sqrt((x - center).^2 + (y - center).^2 + (z - center).^2);
-        phantom(distance <= breast_radius) = 1; % Breast
-        phantom(distance <= tumor_radius) = 2;  % Tumor
+    % Add the breast tissue
+    breast_radius = size / 3;
+    distance = sqrt((x - center).^2 + (y - center).^2 + (z - center).^2);
+    phantom(distance <= breast_radius) = 1; % Breast tissue
+    
+    % Add tumors
+    for i = 1:num_tumors
+        tumor_center = tumor_centers(i, :);
+        tumor_radius = tumor_sizes(i);
+        tumor_distance = sqrt((x - tumor_center(1)).^2 + (y - tumor_center(2)).^2 + (z - tumor_center(3)).^2);
+        phantom(tumor_distance <= tumor_radius) = 2; % Tumor
     end
 end
 
@@ -166,12 +194,12 @@ function projection = simulate_xray(phantom, mu_values, angle)
         attenuation(rotated_phantom == material) = mu_values(material + 1);
     end
     
-    % Sum along the Z-axis to simulate the X-ray projection
+    % Sum along the projection axis
     projection = sum(attenuation, 3);
-    
-    % DO NOT normalize here to preserve relative contrast between materials
 end
 
 % Run the GUI
 xray_simulator_gui();
+
+
 
