@@ -174,3 +174,4 @@ end
 
 % Run the GUI
 xray_simulator_gui();
+
