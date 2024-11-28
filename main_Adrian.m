@@ -41,36 +41,53 @@ function xray_simulator_gui()
     % Create the figure
     f = figure('Name', 'X-Ray Simulator', 'NumberTitle', 'off', 'Position', [100, 100, 1000, 600]);
     
-    % Add sliders and text in a vertical column layout
+    % Define the horizontal alignment start positions
+    start_x = 50; % Initial horizontal position
+    start_y = 550; % Vertical position for the controls
+    control_width = 100; % Width of the text boxes and sliders
+    spacing = 20; % Spacing between controls
+    height = 20; % Height of the controls
     
     % X-Ray Angle
-    uicontrol(f, 'Style', 'text', 'Position', [50, 550, 100, 20], 'String', 'X-Ray Angle');
-    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 550, 100, 20], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y, control_width, height], 'String', 'X-Ray 3D rotation');
+    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y, control_width, height], ...
                              'Min', 0, 'Max', 180, 'Value', 0, ...
                              'Callback', @(~, ~) update_visualization());
     
     % Distance
-    uicontrol(f, 'Style', 'text', 'Position', [50, 500, 100, 20], 'String', 'Distance');
-    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 500, 100, 20], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 2, start_y, control_width, height], 'String', 'Source Distance');
+    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + (control_width + spacing) * 3, start_y, control_width, height], ...
                                 'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
                                 'Callback', @(~, ~) update_visualization());
     
     % Beam Energy
-    uicontrol(f, 'Style', 'text', 'Position', [50, 450, 100, 20], 'String', 'Beam Energy (keV)');
-    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [150, 450, 100, 20], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 4, start_y, control_width, height], 'String', 'Beam Energy (keV)');
+    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + (control_width + spacing) * 5, start_y, control_width, height], ...
                               'Min', 20, 'Max', 50, 'Value', 30, ...
                               'Callback', @(~, ~) update_visualization());
 
     % Number of Tumors
-    uicontrol(f, 'Style', 'text', 'Position', [50, 400, 100, 20], 'String', 'Num Tumors');
-    num_tumors_input = uicontrol(f, 'Style', 'edit', 'Position', [150, 400, 100, 20], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - height - spacing, control_width, height], 'String', 'Num Tumors');
+    num_tumors_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + control_width + spacing, start_y - height - spacing, control_width, height], ...
                                   'String', '1', 'Callback', @(~, ~) update_visualization());
     
     % Tumor Size
-    uicontrol(f, 'Style', 'text', 'Position', [50, 350, 100, 20], 'String', 'Tumor Size');
-    tumor_size_input = uicontrol(f, 'Style', 'edit', 'Position', [150, 350, 100, 20], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 2, start_y - height - spacing, control_width, height], 'String', 'Tumor Size');
+    tumor_size_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + (control_width + spacing) * 3, start_y - height - spacing, control_width, height], ...
                                   'String', '5', 'Callback', @(~, ~) update_visualization());
+
+    % Film Position
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'Distance from Film');
+    film_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 2 * (height + spacing), control_width, height], ...
+                            'Min', 0, 'Max', 100, 'Value', 50, ...
+                            'Callback', @(~, ~) update_visualization());
     
+    % 2D Rotation Angle
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 3 * (height + spacing), control_width, height], 'String', 'X-Ray 2D rotation');
+    rotation_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 3 * (height + spacing), control_width, height], ...
+                                'Min', 0, 'Max', 360, 'Value', 0, ...
+                                'Callback', @(~, ~) update_visualization());
+
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
     ax2d = axes(f, 'Position', [0.55, 0.1, 0.4, 0.6]); % For 2D projection
@@ -81,73 +98,111 @@ function xray_simulator_gui()
     % Predefined tumor locations (up to 5)
     fixed_tumor_locations = [
         50, 50, 50;  % Tumor 1
-        30, 30, 30;  % Tumor 2
+        30, 70, 30;  % Tumor 2
         70, 30, 70;  % Tumor 3
         40, 40, 40;  % Tumor 4
         30, 50, 30   % Tumor 5
     ];
     
-    function update_visualization()
-        % Get the slider values
-        angle = angle_slider.Value;
-        scale_factor = distance_slider.Value; % Scale factor for perceived distance
-        energy = energy_slider.Value; % X-ray beam energy in keV
-        
-        % Get the user input values for number of tumors and tumor size
-        num_tumors = str2double(num_tumors_input.String);  % Convert string to number
-        tumor_size = str2double(tumor_size_input.String);  % Convert string to number
-        
-        % Ensure that the number of tumors is between 1 and 5
-        num_tumors = min(max(num_tumors, 1), 5); % Limit to between 1 and 5
-        
-        % Use the predefined tumor locations, limit to 'num_tumors'
-        tumor_centers = fixed_tumor_locations(1:num_tumors, :);
-        tumor_sizes = repmat(tumor_size, num_tumors, 1);
-        
-        % Calculate attenuation coefficients based on energy
-        mu_values = calculate_attenuation(energy); 
-        
-        % Generate the phantom with tumors
-        phantom = generate_3d_phantom(base_size, num_tumors, tumor_sizes, tumor_centers);
-        
-        % Simulate the X-ray projection
-        projection = simulate_xray(phantom, mu_values, angle);
-        
-        % Scale the projection size
-        scaled_projection = imresize(projection, 1 / scale_factor, 'nearest');
-        
-        % Add padding to create the black space
-        original_size = size(projection, 1);
-        scaled_size = size(scaled_projection, 1);
-        padding_size = max(0, round((original_size - scaled_size) / 2));
-        padded_projection = padarray(scaled_projection, [padding_size, padding_size], 0, 'both');
-        
-        % Ensure the padded projection matches the original display size
-        padded_projection = imresize(padded_projection, [original_size, original_size], 'nearest');
-        
-        % Update 3D visualization
-        axes(ax3d);
-        cla(ax3d);
-        slice(ax3d, phantom, size(phantom, 2) / 2, size(phantom, 1) / 2, size(phantom, 3) / 2);
-        colormap(ax3d, 'gray');
-        caxis(ax3d, [0 max(phantom(:))]); % Adjust color intensity
-        title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
-        axis(ax3d, 'equal');
-        
-        % Update 2D projection visualization
-        axes(ax2d);
-        cla(ax2d);
-        % Normalize projection for better visualization
-        normalized_projection = padded_projection / max(padded_projection(:));
-        imshow(normalized_projection, [], 'Parent', ax2d);
-        colormap(ax2d, 'gray');
-        caxis(ax2d, [0 1]); % Adjust color intensity dynamically
-        title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV)', angle, energy));
-    end
+function update_visualization()
+    % Get the slider values
+    angle = angle_slider.Value;  % 3D rotation angle
+    scale_factor = distance_slider.Value; % Scale factor for perceived distance
+    energy = energy_slider.Value; % X-ray beam energy in keV
+    rotation_angle_2d = rotation_slider.Value; % 2D rotation angle
     
+    % Get the user input values for number of tumors and tumor size
+    num_tumors = str2double(num_tumors_input.String);  % Convert string to number
+    tumor_size = str2double(tumor_size_input.String);  % Convert string to number
+    
+    % Get film position (as a percentage of the phantom size)
+    film_position = film_slider.Value / 100 * base_size; % Scale film position to the phantom size
+    
+    % Define a maximum size for the film (e.g., 80% of phantom size)
+    max_film_size = 0.8 * base_size;  % You can change this to whatever maximum size you prefer
+    % Define a minimum size for the film (e.g., 10% of phantom size)
+    min_film_size = 0.1 * base_size;  % Minimum size for the film
+    
+    % Cap the film size to the maximum and minimum values
+    film_position = min(max(film_position, min_film_size), max_film_size);  % Ensure the film size is within the allowed range
+    
+    % Ensure that the number of tumors is between 1 and 5
+    num_tumors = min(max(num_tumors, 1), 5); % Limit to between 1 and 5
+    
+    % Use the predefined tumor locations, limit to 'num_tumors'
+    tumor_centers = fixed_tumor_locations(1:num_tumors, :);
+    tumor_sizes = repmat(tumor_size, num_tumors, 1);
+    
+    % Calculate attenuation coefficients based on energy
+    mu_values = calculate_attenuation(energy); 
+    
+    % Generate the phantom with tumors
+    phantom = generate_3d_phantom(base_size, num_tumors, tumor_sizes, tumor_centers);
+    
+    % Simulate the X-ray projection (3D rotation)
+    projection_3d = simulate_xray(phantom, mu_values, angle);
+    
+    % Scale the projection size
+    scaled_projection = imresize(projection_3d, 1 / scale_factor, 'nearest');
+    
+    % Add padding to create the black space
+    original_size = size(projection_3d, 1);
+    scaled_size = size(scaled_projection, 1);
+    padding_size = max(0, round((original_size - scaled_size) / 2));
+    padded_projection = padarray(scaled_projection, [padding_size, padding_size], 0, 'both');
+    
+    % Ensure the padded projection matches the original display size
+    padded_projection = imresize(padded_projection, [original_size, original_size], 'nearest');
+    
+    % Apply 2D rotation (around the Z-axis)
+    rotation_matrix_2d = [cosd(rotation_angle_2d), -sind(rotation_angle_2d); sind(rotation_angle_2d), cosd(rotation_angle_2d)];
+    rotated_projection_2d = imrotate(padded_projection, rotation_angle_2d, 'bilinear', 'crop');
+    
+    % Update 3D visualization
+    axes(ax3d);
+    cla(ax3d);
+    slice(ax3d, phantom, size(phantom, 2) / 2, size(phantom, 1) / 2, size(phantom, 3) / 2);
+    colormap(ax3d, 'gray');
+    caxis(ax3d, [0 max(phantom(:))]); % Adjust color intensity
+    title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
+    axis(ax3d, 'equal');
+    
+    % Update 2D projection visualization (with 2D rotation)
+    axes(ax2d);
+    cla(ax2d);
+    
+    % Step 1: Create a blank RGB canvas (background)
+    canvas = zeros(original_size, original_size, 3);  % RGB canvas
+    
+    % Step 2: Insert film with white color
+    film_color = [3, 3, 3];  % White color
+    film_size = round(film_position);
+    film_start = round((size(canvas, 1) - film_size) / 2);
+    canvas(film_start:film_start+film_size-1, film_start:film_start+film_size-1, :) = repmat(reshape(film_color, 1, 1, 3), film_size, film_size);  % Fill with color
+    
+    % Step 3: Overlay the rotated phantom (projection) on top of the film
+    canvas(:, :, 1) = canvas(:, :, 1) + rotated_projection_2d;  % Red channel (overlay)
+    canvas(:, :, 2) = canvas(:, :, 2) + rotated_projection_2d;  % Green channel (overlay)
+    canvas(:, :, 3) = canvas(:, :, 3) + rotated_projection_2d;  % Blue channel (overlay)
+    
+    % Normalize the canvas for better visualization
+    normalized_canvas = canvas / max(canvas(:));
+    
+    % Display the final result
+    imshow(normalized_canvas, [], 'Parent', ax2d);
+    colormap(ax2d, 'gray');
+    caxis(ax2d, [0 1]); % Adjust color intensity dynamically
+    title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV, 2D Rotation: %.1f°)', angle, energy, rotation_angle_2d));
+end
+
+
+
+
     % Display the initial projection
     update_visualization();
 end
+
+
 
 %% Helper Functions
 
