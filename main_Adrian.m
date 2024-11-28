@@ -44,49 +44,45 @@ function xray_simulator_gui()
     % Define the horizontal alignment start positions
     start_x = 50; % Initial horizontal position
     start_y = 550; % Vertical position for the controls
-    control_width = 100; % Width of the text boxes and sliders
+    control_width = 150; % Width of the text boxes and sliders
     spacing = 20; % Spacing between controls
     height = 20; % Height of the controls
-    
-    % X-Ray Angle
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y, control_width, height], 'String', 'X-Ray 3D rotation');
-    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y, control_width, height], ...
-                             'Min', 0, 'Max', 180, 'Value', 0, ...
-                             'Callback', @(~, ~) update_visualization());
-    
-    % Distance
-    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 2, start_y, control_width, height], 'String', 'Source Distance');
-    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + (control_width + spacing) * 3, start_y, control_width, height], ...
-                                'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
-                                'Callback', @(~, ~) update_visualization());
-    
-    % Beam Energy
-    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 4, start_y, control_width, height], 'String', 'Beam Energy (keV)');
-    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + (control_width + spacing) * 5, start_y, control_width, height], ...
-                              'Min', 20, 'Max', 50, 'Value', 30, ...
-                              'Callback', @(~, ~) update_visualization());
 
-    % Number of Tumors
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - height - spacing, control_width, height], 'String', 'Num Tumors');
-    num_tumors_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + control_width + spacing, start_y - height - spacing, control_width, height], ...
+    % Input Boxes (Number of Tumors and Tumor Size) - Placed on top
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y, control_width, height], 'String', 'Num Tumors');
+    num_tumors_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + control_width + spacing, start_y, control_width, height], ...
                                   'String', '1', 'Callback', @(~, ~) update_visualization());
     
-    % Tumor Size
-    uicontrol(f, 'Style', 'text', 'Position', [start_x + (control_width + spacing) * 2, start_y - height - spacing, control_width, height], 'String', 'Tumor Size');
-    tumor_size_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + (control_width + spacing) * 3, start_y - height - spacing, control_width, height], ...
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y, control_width, height], 'String', 'Tumor Size');
+    tumor_size_input = uicontrol(f, 'Style', 'edit', 'Position', [start_x + 3 * (control_width + spacing), start_y, control_width, height], ...
                                   'String', '5', 'Callback', @(~, ~) update_visualization());
 
-    % Film Position
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'Distance from Film');
-    film_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 2 * (height + spacing), control_width, height], ...
+    % Sliders (First Row)
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - height - spacing, control_width, height], 'String', 'Source Distance');
+    distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - height - spacing, control_width, height], ...
+                                'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
+                                'Callback', @(~, ~) update_visualization());
+
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - height - spacing, control_width, height], 'String', 'Distance from Film');
+    film_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - height - spacing, control_width, height], ...
                             'Min', 0, 'Max', 100, 'Value', 50, ...
                             'Callback', @(~, ~) update_visualization());
-    
-    % 2D Rotation Angle
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 3 * (height + spacing), control_width, height], 'String', 'X-Ray 2D rotation');
-    rotation_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 3 * (height + spacing), control_width, height], ...
+
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 4 * (control_width + spacing), start_y - height - spacing, control_width, height], 'String', 'Beam Energy (keV)');
+    energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 5 * (control_width + spacing), start_y - height - spacing, control_width, height], ...
+                              'Min', 20, 'Max', 50, 'Value', 20, ...
+                              'Callback', @(~, ~) update_visualization());
+
+    % Sliders (Second Row)
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 2D Rotation');
+    rotation_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 2 * (height + spacing), control_width, height], ...
                                 'Min', 0, 'Max', 360, 'Value', 0, ...
                                 'Callback', @(~, ~) update_visualization());
+
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 3D Rotation');
+    angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], ...
+                             'Min', 0, 'Max', 180, 'Value', 0, ...
+                             'Callback', @(~, ~) update_visualization());
 
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
@@ -158,6 +154,35 @@ function update_visualization()
     rotation_matrix_2d = [cosd(rotation_angle_2d), -sind(rotation_angle_2d); sind(rotation_angle_2d), cosd(rotation_angle_2d)];
     rotated_projection_2d = imrotate(padded_projection, rotation_angle_2d, 'bilinear', 'crop');
     
+    % Extract a horizontal profile from the middle of the image
+profile_row = round(size(rotated_projection_2d, 1) / 2);  % Row in the middle
+horizontal_profile = rotated_projection_2d(profile_row, :);  % Extract the pixel values along that row
+
+% Extract a vertical profile from the middle of the image
+profile_col = round(size(rotated_projection_2d, 2) / 2);  % Column in the middle
+vertical_profile = rotated_projection_2d(:, profile_col);  % Extract the pixel values along that column
+
+% Create a new figure with two subplots
+figure('Name', '1D Profiles of 2D Phantom');
+
+% Plot the horizontal profile in the first subplot
+subplot(2, 1, 1);  % Two rows, one column, first plot
+plot(horizontal_profile);
+xlabel('Pixel Index');
+ylabel('Intensity');
+title('1D Profile of 2D Phantom (Horizontal Slice)');
+grid on;
+
+% Plot the vertical profile in the second subplot
+subplot(2, 1, 2);  % Two rows, one column, second plot
+plot(vertical_profile);
+xlabel('Pixel Index');
+ylabel('Intensity');
+title('1D Profile of 2D Phantom (Vertical Slice)');
+grid on;
+
+
+    
     % Update 3D visualization
     axes(ax3d);
     cla(ax3d);
@@ -194,8 +219,6 @@ function update_visualization()
     caxis(ax2d, [0 1]); % Adjust color intensity dynamically
     title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV, 2D Rotation: %.1f°)', angle, energy, rotation_angle_2d));
 end
-
-
 
 
     % Display the initial projection
