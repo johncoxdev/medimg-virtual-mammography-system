@@ -43,10 +43,22 @@ function xray_simulator_gui()
     
     % Define the horizontal alignment start positions
     start_x = 50; % Initial horizontal position
-    start_y = 550; % Vertical position for the controls
+    start_y = 600; % Vertical position for the controls
     control_width = 150; % Width of the text boxes and sliders
-    spacing = 20; % Spacing between controls
-    height = 20; % Height of the controls
+    spacing = 10; % Spacing between controls
+    height = 30; % Height of the controls
+
+    % Add sliders for X and Y width
+uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 3 * (height + spacing), control_width, height], 'String', 'Width X');
+width_x_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 3 * (height + spacing), control_width, height], ...
+                          'Min', 0.5, 'Max', 2, 'Value', 1, ...
+                          'Callback', @(~, ~) update_visualization());
+
+uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 3 * (height + spacing), control_width, height], 'String', 'Width Y');
+width_y_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - 3 * (height + spacing), control_width, height], ...
+                          'Min', 0.5, 'Max', 2, 'Value', 1, ...
+                          'Callback', @(~, ~) update_visualization());
+    
 
     % Input Boxes (Number of Tumors and Tumor Size) - Placed on top
     uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y, control_width, height], 'String', 'Num Tumors');
@@ -60,7 +72,7 @@ function xray_simulator_gui()
     % Sliders (First Row)
     uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - height - spacing, control_width, height], 'String', 'Source Distance');
     distance_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - height - spacing, control_width, height], ...
-                                'Min', 0.5, 'Max', 2, 'Value', 0.5, ...
+                                'Min', 0.5, 'Max', 2, 'Value', 2, ...
                                 'Callback', @(~, ~) update_visualization());
 
     uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - height - spacing, control_width, height], 'String', 'Distance from Film');
@@ -142,8 +154,12 @@ function update_visualization()
     % Calculate attenuation coefficients based on energy
     mu_values = calculate_attenuation(energy); 
     
-    % Generate the phantom with tumors
-    phantom = generate_3d_phantom(base_size, num_tumors, tumor_sizes, tumor_centers);
+    % Get the width scaling factors
+    scale_x = width_x_slider.Value;
+    scale_y = width_y_slider.Value;
+
+    % Generate the phantom with tumors and adjusted widths
+    phantom = generate_3d_phantom(base_size, num_tumors, tumor_sizes, tumor_centers, scale_x, scale_y);
     
     % Simulate the X-ray projection (3D rotation)
     projection_3d = simulate_xray(phantom, mu_values, angle);
@@ -265,22 +281,26 @@ function mu_values = calculate_attenuation(energy)
 end
 
 % Generate 3D Phantom
-function phantom = generate_3d_phantom(size, num_tumors, tumor_sizes, tumor_centers)
+function phantom = generate_3d_phantom(size, num_tumors, tumor_sizes, tumor_centers, scale_x, scale_y)
     [x, y, z] = meshgrid(1:size, 1:size, 1:size);
+    
+    % Apply scaling in the x and y dimensions
+    x_scaled = (x - size / 2) / scale_x + size / 2;
+    y_scaled = (y - size / 2) / scale_y + size / 2;
+
     phantom = zeros(size, size, size);
     
-    center = size / 2;
     % Add the breast tissue
+    center = size / 2;
     breast_radius = size / 3;
-    distance = sqrt((x - center).^2 + (y - center).^2 + (z - center).^2);
+    distance = sqrt((x_scaled - center).^2 + (y_scaled - center).^2 + (z - center).^2);
     phantom(distance <= breast_radius) = 1; % Breast tissue
-    
+
     % Add tumors
     for i = 1:num_tumors
         tumor_center = tumor_centers(i, :);
-        tumor_radius = tumor_sizes(i);
-        tumor_distance = sqrt((x - tumor_center(1)).^2 + (y - tumor_center(2)).^2 + (z - tumor_center(3)).^2);
-        phantom(tumor_distance <= tumor_radius) = 2; % Tumor
+        tumor_distance = sqrt((x_scaled - tumor_center(1)).^2 + (y_scaled - tumor_center(2)).^2 + (z - tumor_center(3)).^2);
+        phantom(tumor_distance <= tumor_sizes(i)) = 2; % Tumor
     end
 end
 
