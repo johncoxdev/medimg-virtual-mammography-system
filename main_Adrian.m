@@ -108,7 +108,9 @@ contrast_text = uicontrol(f, 'Style', 'text', 'Position', [start_x + 7 * (contro
 
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
-    ax2d = axes(f, 'Position', [0.55, 0.1, 0.4, 0.6]); % For 2D projection
+    ax2d = axes(f, 'Position', [0.35, 0.1, 0.4, 0.6]); % For 2D projection
+    ax4d = axes(f, 'Position', [0.75, 0.5, 0.2, 0.3]); % For 1D profile
+    ax5d = axes(f, 'Position', [0.75, 0.1, 0.2, 0.3]); % For 1D profile 2
     
     % Base phantom size
     base_size = 100;
@@ -199,24 +201,25 @@ horizontal_profile = rotated_projection_2d(profile_row, :);  % Extract the pixel
 profile_col = round(size(rotated_projection_2d, 2) / 2);  % Column in the middle
 vertical_profile = rotated_projection_2d(:, profile_col);  % Extract the pixel values along that column
 
-% Create a new figure with two subplots
-figure('Name', '1D Profiles of 2D Phantom');
 
-% Plot the horizontal profile in the first subplot
-subplot(2, 1, 1);  % Two rows, one column, first plot
+% Assuming 'f' is the figure handle and 'ax4d' is the existing axes
+% Plot horizontal profile in the first axes (ax4d)
+axes(ax4d);  % Switch to ax4d
 plot(horizontal_profile);
 xlabel('Pixel Index');
 ylabel('Intensity');
 title('1D Profile of 2D Phantom (Horizontal Slice)');
 grid on;
 
-% Plot the vertical profile in the second subplot
-subplot(2, 1, 2);  % Two rows, one column, second plot
+axes(ax5d);  % Switch to ax4d
 plot(vertical_profile);
 xlabel('Pixel Index');
 ylabel('Intensity');
 title('1D Profile of 2D Phantom (Vertical Slice)');
 grid on;
+
+
+
 
 
     
