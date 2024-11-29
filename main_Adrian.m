@@ -68,6 +68,13 @@ function xray_simulator_gui()
                             'Min', 0, 'Max', 100, 'Value', 50, ...
                             'Callback', @(~, ~) update_visualization());
 
+    % Contrast Display
+uicontrol(f, 'Style', 'text', 'Position', [start_x + 6 * (control_width + spacing), start_y - height - spacing, control_width, height], ...
+          'String', 'Contrast:');
+contrast_text = uicontrol(f, 'Style', 'text', 'Position', [start_x + 7 * (control_width + spacing), start_y - height - spacing, control_width, height], ...
+                          'String', 'N/A');
+
+
     uicontrol(f, 'Style', 'text', 'Position', [start_x + 4 * (control_width + spacing), start_y - height - spacing, control_width, height], 'String', 'Beam Energy (keV)');
     energy_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 5 * (control_width + spacing), start_y - height - spacing, control_width, height], ...
                               'Min', 20, 'Max', 50, 'Value', 20, ...
@@ -83,6 +90,9 @@ function xray_simulator_gui()
     angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], ...
                              'Min', 0, 'Max', 180, 'Value', 0, ...
                              'Callback', @(~, ~) update_visualization());
+
+
+    
 
     % Axes to display 3D Phantom and 2D Projection
     ax3d = axes(f, 'Position', [0.05, 0.1, 0.4, 0.6]); % For 3D phantom
@@ -153,6 +163,17 @@ function update_visualization()
     % Apply 2D rotation (around the Z-axis)
     rotation_matrix_2d = [cosd(rotation_angle_2d), -sind(rotation_angle_2d); sind(rotation_angle_2d), cosd(rotation_angle_2d)];
     rotated_projection_2d = imrotate(padded_projection, rotation_angle_2d, 'bilinear', 'crop');
+
+    % Calculate the attenuation values for the first tumor and breast tissue
+tumor_value = mu_values(3); % Attenuation for tumor
+breast_value = mu_values(2); % Attenuation for breast tissue
+
+% Compute the contrast
+contrast = (tumor_value - breast_value) / breast_value;
+
+% Update the contrast display
+contrast_text.String = sprintf('%.2f', contrast);
+
     
     % Extract a horizontal profile from the middle of the image
 profile_row = round(size(rotated_projection_2d, 1) / 2);  % Row in the middle
@@ -228,6 +249,8 @@ end
 
 
 %% Helper Functions
+
+
 
 % Calculate Attenuation Coefficients Based on Energy
 function mu_values = calculate_attenuation(energy)
