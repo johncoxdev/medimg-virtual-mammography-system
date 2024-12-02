@@ -93,12 +93,12 @@ contrast_text = uicontrol(f, 'Style', 'text', 'Position', [start_x + 7 * (contro
                               'Callback', @(~, ~) update_visualization());
 
     % Sliders (Second Row)
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 2D Rotation');
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 2D A');
     rotation_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 2 * (height + spacing), control_width, height], ...
                                 'Min', 0, 'Max', 360, 'Value', 0, ...
                                 'Callback', @(~, ~) update_visualization());
 
-    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 3D Rotation');
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 3D Angle');
     angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], ...
                              'Min', 0, 'Max', 180, 'Value', 0, ...
                              'Callback', @(~, ~) update_visualization());
@@ -221,16 +221,46 @@ grid on;
 
 
 
-
-    
     % Update 3D visualization
     axes(ax3d);
     cla(ax3d);
-    slice(ax3d, phantom, size(phantom, 2) / 2, size(phantom, 1) / 2, size(phantom, 3) / 2);
-    colormap(ax3d, 'gray');
-    caxis(ax3d, [0 max(phantom(:))]); % Adjust color intensity
+    
+    % Calculate slice positions based on tumor locations
+    active_tumors = tumor_centers(1:num_tumors, :);  % Get only the active tumor positions
+    xpositions = active_tumors(:,1);
+    ypositions = active_tumors(:,2);
+    zpositions = active_tumors(:,3);
+    
+    % Create slices that pass through tumor centers and middle of phantom
+    xslice = unique([xpositions', size(phantom,1)/2]);
+    yslice = unique([ypositions', size(phantom,2)/2]);
+    zslice = unique([zpositions', size(phantom,3)/2]);
+    
+    % Create slice visualization
+    h = slice(phantom, xslice, yslice, zslice);
+    
+    % Set properties for all slices
+    for i = 1:length(h)
+        set(h(i), 'EdgeColor', 'none');
+    end
+    
+    % Customize the visualization
+    colormap(ax3d, 'hot');
+    alpha(0.6);  % Adjust transparency
+    
+    % Set view properties
+    view(ax3d, 45, 30);  % Adjusted viewing angle
+    grid(ax3d, 'on');
+    axis(ax3d, 'equal', 'tight');
+    xlabel(ax3d, 'X');
+    ylabel(ax3d, 'Y');
+    zlabel(ax3d, 'Z');
     title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
-    axis(ax3d, 'equal');
+    colorbar(ax3d);
+    
+    % Enhance the appearance
+    lighting gouraud
+    camlight;
     
     % Update 2D projection visualization (with 2D rotation)
     axes(ax2d);

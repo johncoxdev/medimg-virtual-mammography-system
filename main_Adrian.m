@@ -93,12 +93,12 @@ contrast_text = uicontrol(f, 'Style', 'text', 'Position', [start_x + 7 * (contro
                               'Callback', @(~, ~) update_visualization());
 
     % Sliders (Second Row)
-    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 2D Rotation');
+    uicontrol(f, 'Style', 'text', 'Position', [start_x, start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 2D Angle');
     rotation_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + control_width + spacing, start_y - 2 * (height + spacing), control_width, height], ...
                                 'Min', 0, 'Max', 360, 'Value', 0, ...
                                 'Callback', @(~, ~) update_visualization());
 
-    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 3D Rotation');
+    uicontrol(f, 'Style', 'text', 'Position', [start_x + 2 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], 'String', 'X-Ray 3D Angle');
     angle_slider = uicontrol(f, 'Style', 'slider', 'Position', [start_x + 3 * (control_width + spacing), start_y - 2 * (height + spacing), control_width, height], ...
                              'Min', 0, 'Max', 180, 'Value', 0, ...
                              'Callback', @(~, ~) update_visualization());
@@ -287,7 +287,7 @@ grid on;
     imshow(normalized_canvas, [], 'Parent', ax2d);
     colormap(ax2d, 'gray');
     caxis(ax2d, [0 1]); % Adjust color intensity dynamically
-    title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV, 2D Rotation: %.1f°)', angle, energy, rotation_angle_2d));
+    title(ax2d, sprintf('Projection (Angle: %.0f°, Energy: %.1f keV, 2D Angle: %.1f°)', angle, energy, rotation_angle_2d));
 end
 
 
