@@ -255,7 +255,7 @@ grid on;
     xlabel(ax3d, 'X');
     ylabel(ax3d, 'Y');
     zlabel(ax3d, 'Z');
-    title(ax3d, sprintf('3D Phantom (%d Tumors)', num_tumors));
+    title(ax3d, sprintf('3D Phantom (Distance Factor: %.2f)', scale_factor));
     colorbar(ax3d);
     
     % Enhance the appearance
